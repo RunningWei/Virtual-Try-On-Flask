@@ -1,3 +1,4 @@
+# coding=utf-8
 '''
 本文件负责VTO的flask服务端。
 提供web服务、响应客户端预测请求、推荐match请求。
