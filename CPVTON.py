@@ -21,7 +21,7 @@ import json
 # 为输入提供正则化
 transformer = transforms.Compose([  \
                 transforms.ToTensor(),   \
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                transforms.Normalize([0.5], [0.5])])
     
 class CPVTON(object):
     
