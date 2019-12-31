@@ -21,7 +21,7 @@ class Model(object):
    
     transformer = transforms.Compose([  \
                 transforms.ToTensor(),   \
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                transforms.Normalize([0.5], [0.5])])
     
     def __init__(self, pb_path, gmm_path, tom_path):
         '''
