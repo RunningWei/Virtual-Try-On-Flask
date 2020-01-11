@@ -213,7 +213,8 @@ class Model(object):
 
         parse = parse[upper:bounder,left:right,:]  # 裁剪parse结果。注意parse的结果会有比较大损失
         
-        parse = np.array(Image.fromarray(np.array(np.concatenate([parse,parse,parse], axis=2)/17*255, dtype='uint8')).resize((192,256)))
+        # 如17和255均为整数，可能导致整数除法而出错，故用小数
+        parse = np.array(Image.fromarray(np.array(np.concatenate([parse,parse,parse], axis=2)/17.*255., dtype='uint8')).resize((192,256)))
         
         parse = np.array(parse[:,:,:1]/(255/17),dtype='uint8')
         
