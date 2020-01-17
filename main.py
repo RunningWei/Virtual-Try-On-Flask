@@ -1,8 +1,7 @@
+%%writefile main.py
 # coding=utf-8
-'''
-本文件负责VTO的flask服务端。
-提供web服务、响应客户端预测请求、推荐match请求。
-'''
+import random,base64
+
 import os
 from flask import Flask, render_template, request, url_for, send_from_directory
 from PIL import Image
@@ -81,14 +80,49 @@ def match_cloth():
     return "please use POST request (match)!"
 
 # cloth list for web server
-cloth_list_raw = os.listdir(os.path.join(BASE_DIR, "static", "img"))
+# cloth_path = "static/img"
+cloth_path = "data/test/viton_resize/test/cloth"
+cloth_list_raw = os.listdir(os.path.join(BASE_DIR, cloth_path))
 cloth_list = []
 counter = 0
 for cloth in cloth_list_raw:
     if 'jpg' in cloth:
-        cloth_list.append([os.path.join("static", "img", cloth), counter])
+        cloth_list.append([os.path.join(cloth_path, cloth), counter])
         counter+=1
 
+
+@app.route('/try', methods=['GET', 'POST'])
+def try_on_cloth():
+    print('--form--', request.form)
+    print('--files--', request.files)
+    print('--data--', request.data)
+
+    # index=0 # init
+    index = random.randint(0, counter-1) # 随机选择衣服
+    cloth_image=None
+    if request.form['choose_person']=='get_a_model':
+      person_image = os.path.join('data/test/viton_resize/test/image',os.listdir('data/test/viton_resize/test/image')[2])
+    elif request.form['choose_person']=='upload_one':
+      person_image = request.files['person_image']
+    else: # 文件名，已保存过
+      person_image = request.form['choose_person']
+    
+    start_time = time.time()
+    o_name, h_name = run_model_web(person_image, cloth_list[index][0].split("\\")[-1],cloth_image)
+    end_time = time.time()
+    ret_json = {
+            'code': 0,
+            'result': {
+                "o_img": imageToStr(o_name),
+                "h_name": h_name,
+            }
+        }
+    if o_name is None:
+        return 'I told you only clothes image with shape 256*192*3'
+    else:
+        return json.dumps(ret_json)
+
+        
 @app.route('/web')
 def hello_world():
     return render_template('login.html', img_list=cloth_list)
@@ -112,12 +146,19 @@ def upload_image():
         start_time = time.time()
         o_name, h_name = run_model_web(person_image, cloth_list[index][0].split("\\")[-1],cloth_image)
         end_time = time.time()
+        
         if o_name is None:
             return 'I told you only clothes image with shape 256*192*3'
         else:
             return render_template('login.html', img_list=cloth_list,result1 = h_name, result2 = o_name, info="time: %.3f" % (end_time-start_time))
 
-        
+def imageToStr(image):
+        with open(image,'rb') as f:
+            image_byte=base64.b64encode(f.read())
+        image_str=image_byte.decode('ascii') #byte类型转换为str
+        return image_str
+
+
 def run_model_web(f, cloth_name, cloth_f=None):
     '''
     为web服务进行预测。cloth_name和cloth_f中必有一个有内容，优先选择cloth_f，即用户上传的衣服图片
@@ -142,7 +183,8 @@ def run_model_web(f, cloth_name, cloth_f=None):
     img = Image.open(f)
     human_img = np.array(img)
         
-    out,v = model.predict(human_img, c_img, need_bright=False, keep_back=True)
+    # out,v = model.predict(human_img, c_img, need_bright=False, keep_back=True)
+    out,v = model.predict(human_img, c_img, need_pre=True, keep_back=True, need_dilate=False, check_dirty=True)
     print("v:"+str(v))
     out = np.array(out,dtype='uint8')
     
@@ -198,6 +240,8 @@ if __name__ == '__main__':
     app.config['TEMPLATES_AUTO_RELOAD'] = True
 
     if platform.system() == 'Linux':
-        app.run(host='0.0.0.0', port=5000)
+        app.run(host='0.0.0.0', port=5000,
+                ssl_context=("certification/2731760_thewangwei.com.pem",
+                        "certification/2731760_thewangwei.com.key"))
     else:
         app.run()  # only for running test locally on Windows
