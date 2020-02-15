@@ -1,4 +1,3 @@
-%%writefile main.py
 # coding=utf-8
 import random,base64
 
